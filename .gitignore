@@ -259,3 +259,14 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+capstone_test/capstone_test\.vcxproj
+
+*.vcxproj
+
+capstone_test/capstone_test\.vcxproj\.filters
+
+capstone_test/test-pattern\.jpg
+
+capstone_test/test-pattern\.bmp
+
+capstone_test/Ethel\.JPG
