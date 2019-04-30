@@ -1,3 +1,8 @@
+/*
+ * 
+ * 
+ * 
+*/
 #include <setjmp.h>
 #include <iostream>
 #include "turbojpeg.h"
@@ -12,7 +17,7 @@
 struct IntBuffer
 {
 	unsigned int* buffer; //Data Buffer
-	int size;              //Size of Buffer
+	unsigned long *size = new unsigned long;              //Size of Buffer
 
 	void init(long length)
 	{
@@ -25,7 +30,7 @@ struct IntBuffer
 		}
 
 		//Store Size of Buffer
-		size = length;
+		*size = length;
 	}
 
 	void destroy()
@@ -34,14 +39,14 @@ struct IntBuffer
 		delete buffer;
 
 		//Set Size to 0
-		size = 0;
+		delete size;
 	}
 };
 
 struct CharBuffer
 {
 	unsigned char* buffer; //Data Buffer
-	int size;              //Size of Buffer
+	unsigned long *size = new unsigned long;                  //Size of Buffer
 
 	void init(long length)
 	{
@@ -49,7 +54,7 @@ struct CharBuffer
 		buffer = new unsigned char[length];
 
 		//Store Size of Buffer
-		size = length;
+		*size = length;
 	}
 
 	void init(unsigned char *buf)
@@ -63,14 +68,14 @@ struct CharBuffer
 		delete buffer;
 
 		//Set Size to 0
-		size = 0;
+		delete size;
 	}
 };
 
 struct ImageBuffer
 {
 	unsigned char* buffer; //Data Buffer
-	int size;              //Size of Buffer
+	unsigned long *size = new unsigned long;                  //Size of Buffer
 
 	int width;
 	int height;
@@ -84,7 +89,7 @@ struct ImageBuffer
 		buffer = new unsigned char[length];
 
 		//Store Size of Buffer
-		size = length;
+		*size = length;
 	}
 
 	void init(unsigned char *buf)
@@ -98,7 +103,7 @@ struct ImageBuffer
 		delete buffer;
 
 		//Set Size to 0
-		size = 0;
+		delete size;
 	}
 };
 
@@ -115,11 +120,14 @@ CharBuffer* readFileJPG(char *filename)
 {
 	//Initialize file stream object
 	std::ifstream infile;
+
+	//Open jpeg file specified by user
 	infile.open(filename, std::ios::binary);
 
 	//If Infile has not opened return nullptr
 	if (!infile)
 		return nullptr;
+
 
 	//Move to end of file
 	infile.seekg(0L, std::ios::end);
@@ -134,7 +142,7 @@ CharBuffer* readFileJPG(char *filename)
 	infile.seekg(0L, std::ios::beg);
 
 	//Read file into memory
-	infile.read((char*)buffer->buffer, buffer->size);
+	infile.read((char*)buffer->buffer, *buffer->size);
 
 	//Close file
 	infile.close();
@@ -179,7 +187,7 @@ ImageBuffer* readFileBMP(char *filename)
 	int *pixelFormat = new int;
 	*pixelFormat = TJPF_RGB;
 
-	buffer->size = buffer->height * buffer->width * 3;
+	*buffer->size = buffer->height * buffer->width * 3;
 
 	buffer->init(tjLoadImage(filename, &buffer->width, 1, &buffer->height, pixelFormat, TJFLAG_STOPONWARNING));
 
@@ -212,13 +220,13 @@ ImageBuffer* decompressYUV(CharBuffer *fileBuffer)
 	ImageBuffer *imageBuffer = new ImageBuffer;
 
 	//Read Header from File
-	tjDecompressHeader3(handle, fileBuffer->buffer, fileBuffer->size, &imageBuffer->width, &imageBuffer->height, &imageBuffer->subSampling, &imageBuffer->colorSpace);
+	tjDecompressHeader3(handle, fileBuffer->buffer, *fileBuffer->size, &imageBuffer->width, &imageBuffer->height, &imageBuffer->subSampling, &imageBuffer->colorSpace);
 
 	//Initialize image buffer with size of YUV
 	imageBuffer->init(tjBufSizeYUV2(imageBuffer->width, PAD, imageBuffer->height, imageBuffer->subSampling));
 
 	//Decompress Image data to image buffer
-	tjDecompressToYUV2(handle, fileBuffer->buffer, fileBuffer->size, imageBuffer->buffer, imageBuffer->width, PAD, imageBuffer->height, TJFLAG_STOPONWARNING);
+	tjDecompressToYUV2(handle, fileBuffer->buffer, *fileBuffer->size, imageBuffer->buffer, imageBuffer->width, PAD, imageBuffer->height, TJFLAG_STOPONWARNING);
 
 	//Destroy Decompressor
 	tjDestroy(handle);
@@ -249,7 +257,7 @@ ImageBuffer* decompressRGB(CharBuffer *fileBuffer)
 	ImageBuffer *imageBuffer = new ImageBuffer;
 
 	//Read Header from File
-	tjDecompressHeader3(handle, fileBuffer->buffer, fileBuffer->size, &imageBuffer->width, &imageBuffer->height, &imageBuffer->subSampling, &imageBuffer->colorSpace);
+	tjDecompressHeader3(handle, fileBuffer->buffer, *fileBuffer->size, &imageBuffer->width, &imageBuffer->height, &imageBuffer->subSampling, &imageBuffer->colorSpace);
 
 	//Create pitch
 	int pitch = imageBuffer->width * tjPixelSize[TJPF_RGB];
@@ -258,7 +266,7 @@ ImageBuffer* decompressRGB(CharBuffer *fileBuffer)
 	imageBuffer->init(pitch * imageBuffer->height);
 
 	//Decompress Image data to image buffer
-	tjDecompress2(handle, fileBuffer->buffer, fileBuffer->size, imageBuffer->buffer, imageBuffer->width, pitch, imageBuffer->height, TJPF_RGB, TJFLAG_STOPONWARNING);
+	tjDecompress2(handle, fileBuffer->buffer, *fileBuffer->size, imageBuffer->buffer, imageBuffer->width, pitch, imageBuffer->height, TJPF_RGB, TJFLAG_STOPONWARNING);
 
 	//Destroy Decompressor
 	tjDestroy(handle);
@@ -287,7 +295,7 @@ IntBuffer* generateHistogramYUV(ImageBuffer *imageBuffer)
 	CSVBuffer->init(256 * 3);
 
 	//Loop through the 
-	for (int i = 0; i < imageBuffer->size; i++)
+	for (int i = 0; i < *imageBuffer->size; i++)
 	{
 		//Add one to value stored within 
 		CSVBuffer->buffer[(255 * ((i + 2) % 3)) + imageBuffer->buffer[i]]++;
@@ -312,7 +320,7 @@ IntBuffer* generateHistogramRGB(ImageBuffer *imageBuffer)
 	CSVBuffer->init(256 * 4);
 
 	//Loop through the 
-	for (int i = 0; i < imageBuffer->size; i++)
+	for (int i = 0; i < *imageBuffer->size; i++)
 	{
 		//Add one to value stored within 
 		CSVBuffer->buffer[(256 * ((i + 2) % 3)) + imageBuffer->buffer[i]]++;
@@ -346,7 +354,7 @@ void writeCSV(IntBuffer *buffer, char *filename)
 	std::ofstream outfile;
 	outfile.open(filename, std::ios::trunc);
 
-	for (int i = 0; i < buffer->size; i++)
+	for (int i = 0; i < *buffer->size; i++)
 	{
 		std::string data;
 
@@ -371,16 +379,18 @@ void writeCSV(IntBuffer *buffer, char *filename)
 //////////////////////////////
 ImageBuffer* generateDifferenceMap(ImageBuffer *imageBuffer1, ImageBuffer *imageBuffer2)
 {
+	//Create new image buffer to store difference map
 	ImageBuffer *bmp = new ImageBuffer;
 
+	//Assign width
 	bmp->width = imageBuffer1->width;
 	bmp->height = imageBuffer1->height;
 	bmp->pitch = imageBuffer1->width;
 	bmp->colorSpace = TJPF_GRAY;
 
-	bmp->init((imageBuffer1->size / 3 > imageBuffer2->size / 3) ? (imageBuffer2->size / 3) : (imageBuffer1->size / 3));
+	bmp->init((*imageBuffer1->size / 3 > *imageBuffer2->size / 3) ? (*imageBuffer2->size / 3) : (*imageBuffer1->size / 3));
 
-	for(int i = 0; i < imageBuffer1->size && i < imageBuffer2->size; i += 3)
+	for(int i = 0; i < *imageBuffer1->size && i < *imageBuffer2->size; i += 3)
 	{
 		int average1 = (imageBuffer1->buffer[i] + imageBuffer1->buffer[i + 1] + imageBuffer1->buffer[i + 2]) / 3;
 
@@ -410,6 +420,7 @@ ImageBuffer* generateDifferenceMap(ImageBuffer *imageBuffer1, ImageBuffer *image
 ///////////////////
 void writeBMP(ImageBuffer *buffer, char *filename)
 {
+	//Use tjSaveImage to save difference map to disk
 	tjSaveImage(filename, buffer->buffer, buffer->width, buffer->pitch, buffer->height, buffer->colorSpace, TJFLAG_STOPONWARNING);
 }
 
@@ -448,12 +459,7 @@ int main(int argc, char* argv[])
 		//Generate difference map from jpeg and bitmap image
 		writeBMP(generateDifferenceMap(jpegImage, bitmapImage), argv[5]);
 	}
-	//If there are fewer then six arguments
-	else if (argc < 6)
-		//return error code one
-		return 1;
-
-	//Else there are more than six arguments
+	//Else there are not six arguments
 	else
 		//return error code one
 		return 1;
